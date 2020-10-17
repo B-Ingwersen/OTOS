@@ -106,3 +106,5 @@ clean:
 	rm -f $(SRC)/dynamic/CStandardLibrary/*.c
 	rm -f $(EXE)/OTOSCore
 
+.PHONY: all static dynamic initialize clean
+

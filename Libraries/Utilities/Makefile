@@ -106,3 +106,4 @@ clean:
 	rm -f $(SRC)/dynamic/CStandardLibrary/*.c
 	rm -f $(EXE)/Utilities
 
+.PHONY: all static dynamic initialize clean

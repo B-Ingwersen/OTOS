@@ -89,3 +89,5 @@ x86-cleanAll:
 
 x86-test:
 	qemu-system-x86_64 Build/x86/testImage.img -monitor stdio -smp 4
+
+.PHONY: x86-buildAll x86-all x86-bootloaders x86-boot-fat32mbr x86-kernel x86-library-OTOSCore x86-library-Utilities x86-manager-ProcessManager x86-manager-DiskManager x86-manager-LibraryManager x86-manager-ScreenManager x86-manager-KeyboardManager x86-application-Shell x86-diskImage-create x86-diskImage-burnBootloaders x86-diskImage-copyFiles x86-diskImage-mount x86-diskImage-remove x86-initializeAll x86-initialize-directories x86-initialize-cross x86-cleanAll x86-test

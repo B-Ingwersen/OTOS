@@ -49,3 +49,5 @@ clean:
 	rm -f $(Objs)
 	rm -f $(OBJ)/$(TARGET_NAME)
 	rm -f $(EXE)/$(TARGET_NAME)
+
+.PHONY: all initialize clean
