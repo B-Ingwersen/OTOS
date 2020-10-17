@@ -60,16 +60,16 @@ cd ..
 
 # remove source files
 echo "Cleaning up..."
-rm $BINUTILS_COMPRESSED
-rm $GCC_COMPRESSED
-rm -r "binutils-$BINUTILS_VERSION"
-rm -r "gcc-$GCC_VERSION"
-rm -r build-binutils
-rm -r build-gcc
+rm -f $BINUTILS_COMPRESSED
+rm -f $GCC_COMPRESSED
+rm -rf "binutils-$BINUTILS_VERSION"
+rm -rf "gcc-$GCC_VERSION"
+rm -rf build-binutils
+rm -rf build-gcc
 
 # move files into BUILD_DIR
 mv $PREFIX/* .
-rm -r opt
+rm -rf opt
 
 
 

@@ -20,7 +20,7 @@ losetup -o1048576 $LOOP_BACK_FILE $DISK_IMAGE_PATH
 mount -tvfat $LOOP_BACK_FILE $MOUNT_POINT
 
 # clear current files and copy new ones over
-echo "rm -r $MOUNT_POINT/*" | bash
+echo "rm -rf $MOUNT_POINT/*" | bash
 cp -r $FOLDER_TO_COPY/* $MOUNT_POINT
 
 # unmount and detach loopback device

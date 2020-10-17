@@ -21,7 +21,7 @@ dd if=$DISK_IMAGE_PATH of=$TMP_FILE bs=1 count=512
 dd if=$BOOTLOADER1_PATH of=$TMP_FILE bs=1 count=440 conv=notrunc
 dd if=$BOOTLOADER1_PATH of=$TMP_FILE bs=1 skip=510 seek=510 count=2 conv=notrunc
 dd if=$TMP_FILE of=$DISK_IMAGE_PATH bs=1 count=512 conv=notrunc
-rm $TMP_FILE
+rm -f $TMP_FILE
 
 # setup the loopback device
 LOOP_BACK_FILE=$(losetup -f)
@@ -32,7 +32,7 @@ dd if=$LOOP_BACK_FILE of=$TMP_FILE bs=1 count=512
 dd if=$BOOTLOADER2_PATH of=$TMP_FILE bs=1 count=3 conv=notrunc
 dd if=$BOOTLOADER2_PATH of=$TMP_FILE bs=1 skip=90 seek=90 count=420 conv=notrunc
 dd if=$TMP_FILE of=$LOOP_BACK_FILE bs=1 count=512 conv=notrunc
-rm $TMP_FILE
+rm -f $TMP_FILE
 
 # detach loopback device
 losetup -d $LOOP_BACK_FILE
