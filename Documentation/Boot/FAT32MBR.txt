@@ -1,0 +1,49 @@
+How the boot process works:
+
+    1) The stage 1 bootloader loads a list of partitions; the user can select which partition they want, and the bootloader will chainload the bootloader of that partition (the stage 1 bootloader repositions itself so that that the second stage bootloader is loaded to 0x7C00 as if it was directly loaded by the BIOS)
+
+    2) The stage 2 bootloader searches the partition that it is on for the file "/Boot/FAT32MBR":
+        a) if it is NOT found, the bootloader prints out "Error" and when a key is pressed, it reloads the first stage bootloader
+        b) if it is found, it loads the file to 0x8000 and jumps into it
+
+    3) FAT32MBR does everything to prepare the InitializeKernel Program:
+        a) It repositions itself and the Stage 2 bootloader to 0x2000
+        b) It loads the files:
+            i)      "/Kernels/InitializeKernel"         to 0x8000
+            ii)     "/Kernels/Kernel"                   to 0x9000
+            iii)    "/Managers/ProcessManager"          to 0x9000 + sizeof(Kernel)
+            iv)     "/Managers/DiskManager_FAT32MBR"    to 0x9000 + sizeof(Kernel) + sizeof(ProcessManager)
+
+            If any of these files is not present, it raises an error message
+        c) It loads the free memory map to 0x1000
+        d) It sets up protected mode
+        e) It fills in the InitializeKernel Table with the locations and sizes of ProcessManager and DiskManager_FAT32MBR
+        f) It jumps to address 0x8000 to enter InitializeKernel
+    
+    4) InitializeKernel prepares the Kernel:
+        a) Initialize the IDT
+        b) Initialize Memory
+            i) Fills in Memory Table (uses the free memory mpa @ 0x1000)
+            ii) Sets up the Kernel Paged Address Space (Kernel PDE)
+        c) Initialize Interrupts:
+            i) If multiprocessor detected, setup processors and put them in the waiting state
+            ii) Setup PIC or APIC depending on hardware configuration
+        d) Initialize Schedulers
+        e) Initialize System Calls
+        f) Sets up "ProcessManager" and "DiskManager" and adds to the Schedulers
+        g) Gives signal to all processors to enter the scheduler
+    
+    5) Disk Manager initializes:
+        a) Sets up the Root Device Root Partition
+        b) Loads any additional drivers & initializes disks & partitions with those drivers
+        c) Setup message interface
+    
+    6) ProcessManager Initializes:
+        a) Sets up process management interface
+        b) Loads the following managers:
+            -Library Manager
+            -Screen Manager
+            -Keyboard Manager
+            -Authentication Manager
+        c) Gets Managers to initialized state
+        d) Opens and transfers control to the startup shell

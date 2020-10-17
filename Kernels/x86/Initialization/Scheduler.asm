@@ -1,0 +1,13 @@
+Scheduler_Initialize:
+    pusha
+
+    mov eax, SCHEDULER_TABLE_BASE_ADDRESS
+    mov [SCHEDULER_TABLE_ENQUEUE], eax
+    mov [SCHEDULER_TABLE_DEQUEUE], eax
+
+    mov eax, INTERRUPT_SCHEDULER_TABLE_BASE_ADDRESS
+    mov [INTERRUPT_SCHEDULER_TABLE_ENQUEUE], eax
+    mov [INTERRUPT_SCHEDULER_TABLE_DEQUEUE], eax
+
+    popa
+    ret
