@@ -8,6 +8,7 @@
 #include "OTOSCore/SystemCalls.h"
 
 struct OutputScreen * screen = NULL;
+struct OutputScreen * screen_lastDrawn = NULL;
 struct GraphicsScreen * graphicsScreen = NULL;
 MemoryPage graphics_loopdThread = NULL;
 bool32 graphics_loopDataWaiting = false;
@@ -25,8 +26,15 @@ trueTypeFontDescriptor * trueType_monospaceFontBold = NULL;
 trueTypeFontRenderer * trueType_defaultFontRenderer = NULL;
 
 u32 output_initialize() {
+    // allocate screen and its mirror
     screen = malloc(sizeof(struct OutputScreen));
     screen -> freeableScreen = false;
+    screen -> screen = NULL;
+    screen_lastDrawn = malloc(sizeof(struct OutputScreen));
+    screen_lastDrawn -> screen = NULL;
+    screen -> freeableScreen = true;
+
+    // load the default fonts
     graphics_loadCharacterData("/Resources/Fonts/BasicText/textInfo.data");
     trueType_monospaceFont = openTrueTypeFont(&trueType_globalFontManager, "/Resources/Fonts/TrueType/Liberation/Mono-Regular.ttf");
     trueType_monospaceFontBold = openTrueTypeFont(&trueType_globalFontManager, "/Resources/Fonts/TrueType/Liberation/Mono-Bold.ttf");
@@ -65,12 +73,19 @@ void output_setupVideoMode(struct ScreenManager_Messaging_ModeInfo * modeInfo) {
     trueType_drawCharacter(f, 20, 20, &screenData, 0xFF);
     asm volatile("jmp $" :: "a"(0xBABAB));*/
     
+    // initialize screen and free attached resources
     screen -> tabSize = 8;
     screen -> cursorBackgroundSave = output_shellColors;
     screen -> cursorLocation = 0;
+    if (screen -> freeableScreen && screen -> screen != NULL) {
+        free(screen -> screen);
+        screen -> screen = NULL;
+    }
 
-    if (screen -> freeableScreen) {
-        //free(screen -> screen);
+    // free resources attached to screen
+    if (screen_lastDrawn -> freeableScreen && screen_lastDrawn -> screen != NULL) {
+        free(screen_lastDrawn -> screen);
+        screen_lastDrawn -> screen = NULL;
     }
 
     if (modeInfo -> type == SCREEN_VIDEO_MODE_TYPE_GRAPHICS) {
@@ -92,8 +107,16 @@ void output_setupVideoMode(struct ScreenManager_Messaging_ModeInfo * modeInfo) {
 
         if (graphicsScreen != NULL) {
             free(graphicsScreen);
+            graphicsScreen = NULL;
         }
-        graphicsScreen = NULL;
+
+        screen_lastDrawn -> screen = (u8*)malloc(modeInfo -> width * modeInfo -> height * 2);
+        screen_lastDrawn -> width = modeInfo -> width;
+        screen_lastDrawn -> height = modeInfo -> height;
+        int i; for (i = 0; i < modeInfo -> width * modeInfo -> height; ++i) {
+            screen_lastDrawn -> screen[2 * i] = 255;
+            screen_lastDrawn -> screen[2 * i + 1] = output_shellColors;
+        }
     }
 
     synchronization_CloseSpinlock(&output_lock);
@@ -105,15 +128,21 @@ void output_resizeGraphicsText() {
     i32 textWidth = graphicsScreen -> width / charWidth;
     i32 textHeight = graphicsScreen -> height / output_shellFontSize;
 
+    // initialize blank screens
     screen -> screen = (u8*)malloc(textWidth * textHeight * 2);
     screen -> freeableScreen = true;
+    screen_lastDrawn -> screen = (u8*)malloc(textWidth * textHeight * 2);
     int i; for (i = 0; i < textHeight * textWidth; ++i) {
         screen -> screen[2 * i] = 0;
         screen -> screen[2 * i + 1] = output_shellColors;
+        screen_lastDrawn -> screen[2 * i] = 255;
+        screen_lastDrawn -> screen[2 * i + 1] = output_shellColors;
     }
 
     screen -> width = textWidth;
     screen -> height = textHeight;
+    screen_lastDrawn -> width = textWidth;
+    screen_lastDrawn -> height = textHeight;
 }
 
 void drawGraphicsScreen() {
@@ -127,6 +156,7 @@ void drawGraphicsScreen() {
     i32 charHeight = graphicsScreen -> height / screen -> height;
 
     u8 * textScreenPtr = screen -> screen;
+    u8 * lastDrawnPtr = screen_lastDrawn -> screen;
     const u32 emulatedTextScreenColors[] = {
         0x00, 0xaa, 0xaa00, 0xaaaa, 0xaa0000, 0xaa55aa, 0xFF7000, 0xaaaaaa,
         0x555555, 0x5555ff, 0x55ff55, 0x55ffff, 0xff5555, 0xff55ff, 0xffff55, 0xFFFFFF
@@ -140,23 +170,26 @@ void drawGraphicsScreen() {
 
             u8 c = textScreenPtr[0];
             u8 color = textScreenPtr[1];
-            u32 textColor = emulatedTextScreenColors[color & 0xF];
-            u32 backgroundColor = emulatedTextScreenColors[color / 16];
+            if (c != lastDrawnPtr[0] || color != lastDrawnPtr[1]) {
+                u32 textColor = emulatedTextScreenColors[color & 0xF];
+                u32 backgroundColor = emulatedTextScreenColors[color / 16];
 
-            if (c == 0xDB) {
-                backgroundColor = textColor;
-            }
-            drawRectangle(graphicsScreen, &windowSection, x, y, charWidth, charHeight, backgroundColor);
+                if (c == 0xDB) {
+                    backgroundColor = textColor;
+                }
+                drawRectangle(graphicsScreen, &windowSection, x, y, charWidth, charHeight, backgroundColor);
 
-            if (c > 32 && c < 127) {
-                fontCharacterCache * f = trueType_renderCharacter(c, trueType_defaultFontRenderer);
-                trueType_drawCharacter(f, x, y, &screenData, textColor);
-
-                //u8 * textInfo = graphics_characterData + charTable[c - 32];
-                //drawBasicCharacter(graphicsScreen, &windowSection, textInfo, x, y, 16, textColor);
+                if (c > 32 && c < 127) {
+                    fontCharacterCache * f = trueType_renderCharacter(c, trueType_defaultFontRenderer);
+                    trueType_drawCharacter(f, x, y, &screenData, textColor);
+                }
+                
+                lastDrawnPtr[0] = c;
+                lastDrawnPtr[1] = color;
             }
 
             textScreenPtr += 2;
+            lastDrawnPtr += 2;
         }
     }
 
